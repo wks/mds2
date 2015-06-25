@@ -1,6 +1,6 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 
-# Copyright (C) 2013 Kunshan Wang
+# Copyright (C) 2013-2015 Kunshan Wang
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,24 +24,26 @@
 mds2 : Maven Document Server
 """
 
-import SocketServer as ss
-import BaseHTTPServer as bhs
+import socketserver as ss
+import http.server as hs
 import os
 import os.path
 import sys
 import zipfile
 import cgi
 import shutil
+import io
 
 repos = []
 
 common_header = """<!DOCTYPE html>
 <html>
-     <head>
-         <title>Maven Document Server</title>
-     </head>
-     <body>
-     <h1>Maven Document Server</h1>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Maven Document Server</title>
+    </head>
+    <body>
+    <h1>Maven Document Server</h1>
 """
 
 common_footer = """    </body>
@@ -59,12 +61,12 @@ mimetypes = {
         }
 def infer_mimetype(name):
     name_lc = name.lower()
-    for k,v in mimetypes.iteritems():
+    for k,v in mimetypes.items():
         if name_lc.endswith(k):
             return v
     return None
 
-class MyHandler(bhs.BaseHTTPRequestHandler):
+class MyHandler(hs.BaseHTTPRequestHandler):
     def do_GET(self):
         p = self.path
 
@@ -78,10 +80,12 @@ class MyHandler(bhs.BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/html")
         self.end_headers()
 
-        self.wfile.write(common_header)
+        sio = io.StringIO()
+
+        sio.write(common_header)
     
         for repo in repos:
-            self.wfile.write("<h2>%s</h2>\n<ul>\n" % cgi.escape(repo))
+            sio.write("<h2>%s</h2>\n<ul>\n" % cgi.escape(repo))
 
             in_repo_files = []
 
@@ -92,14 +96,16 @@ class MyHandler(bhs.BaseHTTPRequestHandler):
                         in_repo_files.append((name, fullpath))
 
             for name, fullpath in sorted(in_repo_files):
-                self.wfile.write(
+                sio.write(
                         '<li><a href="%s//">%s</a></li>\n' % (
                             cgi.escape(fullpath, True),
                             cgi.escape(name)))
 
-            self.wfile.write("</ul>\n")
+            sio.write("</ul>\n")
 
-        self.wfile.write(common_footer)
+        sio.write(common_footer)
+
+        self.wfile.write(sio.getvalue().encode("utf8"))
 
     def serve_content(self, p):
         try:
@@ -112,14 +118,14 @@ class MyHandler(bhs.BaseHTTPRequestHandler):
 
         try:
             zf = zipfile.ZipFile(jar_path, "r")
-        except Exception,e:
+        except Exception as e:
             self.send_error(400, "Cannot open jar %s:\n%s"%(jar_path,e))
             return
         else:
             with zf:
                 try:
                     f = zf.open(content_path, "r")
-                except Exception,e:
+                except Exception as e:
                     self.send_error(400, "Cannot open %s in jar %s:\n%s"%(
                         content_path,jar_path, e))
                     return
@@ -135,10 +141,15 @@ class MyHandler(bhs.BaseHTTPRequestHandler):
 class ThreadedTCPServer(ss.ThreadingMixIn, ss.TCPServer):
     allow_reuse_address = True
 
+help_string = """Maven Document Server 2, a simple HTTP server which serves
+your JavaDocs, including those downloaded by Maven or Ivy.  By default, all jar
+packages in any subdirectories of ~/.m2/repository or ~/.ivy2.cache or
+~/.mds2/jars whose name end with "-javadoc.jar" will be served."""
+
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description='Maven Document Server. Help you read JavaDocs and ScalaDocs in ~/.m2 or ~/.ivy2 or wherever you like.')
+    parser = argparse.ArgumentParser(description=help_string)
     parser.add_argument('-p', '--port', dest='port', type=int, default=63787,
             help='TCP listening port (default: 63787)')
     parser.add_argument('-r', '--user-repos', dest='repos', default=None,
@@ -154,6 +165,7 @@ def main():
     default_repos = [
             os.path.join(homedir, ".m2", "repository"),
             os.path.join(homedir, ".ivy2", "cache"),
+            os.path.join(homedir, ".mds2", "jars"),
             ]
     if args.repos != None:
         repos = args.repos.split(":")
@@ -166,12 +178,12 @@ def main():
     handler = MyHandler
     httpd = ThreadedTCPServer(("127.0.0.1", port), handler)
 
-    print "Maven Document Server"
-    print "Address: http://localhost:%d/" % port
-    print
-    print "Repositories:"
+    print("Maven Document Server")
+    print("Address: http://localhost:%d/" % port)
+    print()
+    print("Repositories:")
     for repo in repos:
-        print "    ", repo
+        print("    ", repo)
 
     httpd.serve_forever()
 

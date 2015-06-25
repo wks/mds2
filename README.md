@@ -2,22 +2,26 @@
 
 *Just a simpler Maven Document Server re-written in Python*
 
-If you want to read the HTML JavaDocs or ScalaDocs in your local Maven or Ivy
-repositories (usually in `~/.m2/repository` or `~/.ivy2/cache`), this program
-can run a web server and serve the contents inside those `*-javadoc.jar`
-packages.
+`mds2` is a simple HTTP server. It will serve all files with the suffix
+"-javadoc.jar" in the following directories:
 
-By the way, you have to configure your Maven or SBT to download JavaDoc
-packages. This program will not download them for you.
+* `~/.m2/repository`
+* `~/.ivy2/cache`
+* `~/.mds2/jars`
 
 ## How to use?
 
-    python2 mds2.py
+If you use Maven, SBT or other tools that download jar packages for you, you
+need to configure them to also download the JavaDoc packages.
+
+To start the HTTP server, invoke:
+
+    python3 mds2.py
 
 And then open a browser.
 
-Make sure you use **python2**. Some Linux distributions (e.g. Arch) aliases
-`python` as `python3` instead of `python2`. Be careful.
+Make sure you use **python3**. Some systems (e.g. OSX) provides Python 2 and
+the `python` command is aliased to `python2`.
 
 ## Command-line parameters
 
@@ -25,7 +29,7 @@ Make sure you use **python2**. Some Linux distributions (e.g. Arch) aliases
 - Customize the repositories (where mds2 looks for `*-javadoc.jar` files)
   with `-e` or `-r`.
 
-Invoke `python2 mds2.py --help` for more information.
+Invoke `python3 mds2.py --help` for more information.
 
 ## Author
 
