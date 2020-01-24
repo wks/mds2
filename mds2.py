@@ -30,7 +30,7 @@ import os
 import os.path
 import sys
 import zipfile
-import cgi
+import html
 import shutil
 import io
 
@@ -85,7 +85,7 @@ class MyHandler(hs.BaseHTTPRequestHandler):
         sio.write(common_header)
     
         for repo in repos:
-            sio.write("<h2>%s</h2>\n<ul>\n" % cgi.escape(repo))
+            sio.write("<h2>%s</h2>\n<ul>\n" % html.escape(repo))
 
             in_repo_files = []
 
@@ -98,8 +98,8 @@ class MyHandler(hs.BaseHTTPRequestHandler):
             for name, fullpath in sorted(in_repo_files):
                 sio.write(
                         '<li><a href="%s//">%s</a></li>\n' % (
-                            cgi.escape(fullpath, True),
-                            cgi.escape(name)))
+                            html.escape(fullpath, True),
+                            html.escape(name)))
 
             sio.write("</ul>\n")
 
